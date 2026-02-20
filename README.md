@@ -25,4 +25,20 @@ flutter build apk --release
 
 ---
 
+## 🛠️ Especificaciones Técnicas
+
+- **Versión actual:** 1.0.0
+- **Peso del APK:** 50.9 MB
+- **Requisitos:** Android 5.0 (Lollipop) o superior.
+- **Tecnología:** Flutter + Supabase (Real-time Cloud Sync).
+
+## 📖 ¿Cómo funciona?
+
+1.  **Instala:** Descarga el APK, habilita "Fuentes desconocidas" e instala.
+2.  **Busca:** Localiza documentos por nombre o categoría (Seguridad, Salud, etc.).
+3.  **Descarga:** Guarda los archivos localmente para acceso offline inmediato.
+
+---
+
 © 2026 Grupo Padilla y Aguilar.
+**"En casa nos esperan"**
