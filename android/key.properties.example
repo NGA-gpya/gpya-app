@@ -1,0 +1,4 @@
+storePassword=TU_CONTRASEÑA_DE_ALMACEN
+keyPassword=TU_CONTRASEÑA_DE_CLAVE
+keyAlias=upload
+storeFile=C:/Users/TU_USUARIO/GPYA/upload-keystore.jks
