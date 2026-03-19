@@ -39,7 +39,6 @@ flutter:
   uses-material-design: true
   assets:
     - assets/icon/
-    - .env
 
 flutter_launcher_icons:
   android: "launcher_icon"
