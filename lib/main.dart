@@ -13,26 +13,23 @@ void main() {
     () async {
       WidgetsFlutterBinding.ensureInitialized();
 
-      // Intentar cargar .env (opcional, para desarrollo local)
+      // Credenciales de Supabase por defecto (anon key es pública)
+      String supabaseUrl = 'https://ifbmzqzxvogewkekapcv.supabase.co';
+      String supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlmYm16cXp4dm9nZXdrZWthcGN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk1MzAwMjQsImV4cCI6MjA4NTEwNjAyNH0.K3DZB5QmLs-HnkAz5dkokUkHODzXj-CUW2MN8gMHqgs';
+
+      // Intentar cargar .env solo si existe (desarrollo local)
       try {
         await dotenv.load(fileName: ".env");
+        supabaseUrl = dotenv.env['SUPABASE_URL'] ?? supabaseUrl;
+        supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? supabaseAnonKey;
+        developer.log('Loaded .env file successfully', name: 'main');
       } catch (e) {
-        developer.log(
-          '.env file not found, using dart-define variables',
-          name: 'main',
-        );
+        developer.log('Using default credentials (no .env)', name: 'main');
       }
 
-      // Credenciales de Supabase (fallback para producción)
-      const defaultUrl = 'https://ifbmzqzxvogewkekapcv.supabase.co';
-      const defaultAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlmYm16cXp4dm9nZXdrZWthcGN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk1MzAwMjQsImV4cCI6MjA4NTEwNjAyNH0.K3DZB5QmLs-HnkAz5dkokUkHODzXj-CUW2MN8gMHqgs';
-
-      final url = dotenv.env['SUPABASE_URL'] ?? defaultUrl;
-      final anonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? defaultAnonKey;
-
       await Supabase.initialize(
-        url: url,
-        anonKey: anonKey,
+        url: supabaseUrl,
+        anonKey: supabaseAnonKey,
       );
 
       runApp(const ProviderScope(child: MyApp()));

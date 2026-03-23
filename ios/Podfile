@@ -1,0 +1,29 @@
+# GPYA iOS Podfile
+platform :ios, '13.0'
+
+# CocoaPods analytics sends network stats and build framework usage to cocoapods.org
+# For more information see https://guides.cocoapods.org/plugin/commands.html#pod-ipc-stats
+install! 'cocoapods', :deterministic_uuids => false
+
+# Flutter Generated Config
+load File.join(File.dirname(__FILE__), 'Flutter', 'generated_xcconfigs.rb')
+
+target 'Runner' do
+  use_frameworks!
+  use_modular_headers!
+
+  flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+  target 'RunnerTests' do
+    inherit! :search_paths
+  end
+end
+
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    flutter_additional_ios_build_settings(target)
+    target.build_configurations.each do |config|
+      # Force 13.0 target for all pods to resolve build warnings and potential rejections
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
+    end
+  end
+end
