@@ -1,0 +1,57 @@
+workflows:
+  ios-app-store:
+    name: GPYA iOS App Store
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      groups:
+        - appstore_credentials
+      vars:
+        APP_STORE_APPLE_ID: "" # Set this in Codemagic with your App Store Connect Apple ID
+        BUNDLE_ID: "com.grupopadillayaguilar.gpya"
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.grupopadillayaguilar.gpya
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+
+      - name: Set up code signing settings on Xcode project
+        script: xcode-project use-profiles
+
+      - name: Build IPA with unique App Store build number
+        script: |
+          set -e
+
+          if [ -z "$APP_STORE_APPLE_ID" ]; then
+            echo "APP_STORE_APPLE_ID is not configured."
+            exit 1
+          fi
+
+          APP_VERSION=$(grep '^version:' pubspec.yaml | awk '{print $2}' | cut -d+ -f1)
+          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID" || true)
+
+          if ! [[ "$LATEST_BUILD_NUMBER" =~ ^[0-9]+$ ]]; then
+            LATEST_BUILD_NUMBER=0
+          fi
+
+          BUILD_NUMBER=$((LATEST_BUILD_NUMBER + 1))
+
+          echo "Building version $APP_VERSION ($BUILD_NUMBER)"
+
+          flutter build ipa --release \
+            --build-name="$APP_VERSION" \
+            --build-number="$BUILD_NUMBER"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - build/ios/archive/*.xcarchive
+      - /tmp/xcodebuild_logs/*.log
+      - flutter_drive.log
+    publishing:
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
