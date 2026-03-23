@@ -13,11 +13,28 @@ void main() {
     () async {
       WidgetsFlutterBinding.ensureInitialized();
 
-      await dotenv.load(fileName: ".env");
+      // Intentar cargar .env (opcional, para desarrollo local)
+      try {
+        await dotenv.load(fileName: ".env");
+      } catch (e) {
+        developer.log(
+          '.env file not found, using dart-define variables',
+          name: 'main',
+        );
+      }
+
+      // Prioridad: .env > --dart-define > vacío
+      const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
+      const supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
+
+      final url = dotenv.env['SUPABASE_URL'] ?? 
+          (supabaseUrl.isNotEmpty ? supabaseUrl : '');
+      final anonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? 
+          (supabaseAnonKey.isNotEmpty ? supabaseAnonKey : '');
 
       await Supabase.initialize(
-        url: dotenv.env['SUPABASE_URL'] ?? '',
-        anonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',
+        url: url,
+        anonKey: anonKey,
       );
 
       runApp(const ProviderScope(child: MyApp()));
