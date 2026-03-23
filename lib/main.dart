@@ -23,14 +23,12 @@ void main() {
         );
       }
 
-      // Prioridad: .env > --dart-define > vacío
-      const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
-      const supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
+      // Credenciales de Supabase (fallback para producción)
+      const defaultUrl = 'https://ifbmzqzxvogewkekapcv.supabase.co';
+      const defaultAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlmYm16cXp4dm9nZXdrZWthcGN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk1MzAwMjQsImV4cCI6MjA4NTEwNjAyNH0.K3DZB5QmLs-HnkAz5dkokUkHODzXj-CUW2MN8gMHqgs';
 
-      final url = dotenv.env['SUPABASE_URL'] ?? 
-          (supabaseUrl.isNotEmpty ? supabaseUrl : '');
-      final anonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? 
-          (supabaseAnonKey.isNotEmpty ? supabaseAnonKey : '');
+      final url = dotenv.env['SUPABASE_URL'] ?? defaultUrl;
+      final anonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? defaultAnonKey;
 
       await Supabase.initialize(
         url: url,
