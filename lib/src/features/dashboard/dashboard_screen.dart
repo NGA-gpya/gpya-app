@@ -255,14 +255,37 @@ class _DocumentCardState extends State<_DocumentCard> {
   }
 
   Future<void> _checkFileExists() async {
-    // Lógica para verificar si el archivo ya existe
+    final savePath = await _resolveSavePath();
+    if (savePath == null) {
+      return;
+    }
+
+    final file = File(savePath);
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _filePath = savePath;
+      _isDownloaded = file.existsSync();
+    });
   }
 
   Future<void> _downloadFile() async {
-    final platform = Theme.of(context).platform;
-
-    if (await Permission.storage.request().isDenied) {
-      // Intentamos continuar
+    if (Platform.isAndroid) {
+      final storageStatus = await Permission.storage.request();
+      if (storageStatus.isDenied || storageStatus.isPermanentlyDenied) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Se requiere permiso de almacenamiento para descargar el archivo.',
+              ),
+            ),
+          );
+        }
+        return;
+      }
     }
 
     setState(() {
@@ -273,25 +296,16 @@ class _DocumentCardState extends State<_DocumentCard> {
     try {
       final dio = Dio();
 
-      Directory? downloadsDir;
-      if (platform == TargetPlatform.android) {
-        downloadsDir = Directory('/storage/emulated/0/Download');
-      } else {
-        downloadsDir = await getDownloadsDirectory();
+      final savePath = await _resolveSavePath();
+      if (savePath == null) {
+        throw Exception(
+          'No se pudo encontrar un directorio valido para guardar el archivo',
+        );
       }
-
-      if (downloadsDir == null) {
-        throw Exception('No se pudo encontrar el directorio de descargas');
-      }
-
-      if (!downloadsDir.existsSync()) {
-        downloadsDir.createSync();
-      }
-
-      final fileName =
-          '${widget.document.title.replaceAll(RegExp(r'[^\w\s\.-]'), '')}.pdf';
-      final savePath = '${downloadsDir.path}/$fileName';
       final file = File(savePath);
+      final fileName = file.uri.pathSegments.isNotEmpty
+          ? file.uri.pathSegments.last
+          : widget.document.title;
 
       if (file.existsSync()) {
         if (mounted) {
@@ -360,6 +374,34 @@ class _DocumentCardState extends State<_DocumentCard> {
         }
       }
     }
+  }
+
+  Future<String?> _resolveSavePath() async {
+    Directory? baseDir;
+    if (Platform.isAndroid) {
+      baseDir = Directory('/storage/emulated/0/Download');
+    } else if (Platform.isIOS) {
+      baseDir = await getApplicationDocumentsDirectory();
+    } else {
+      baseDir =
+          await getDownloadsDirectory() ??
+          await getApplicationDocumentsDirectory();
+    }
+
+    if (baseDir == null) {
+      return null;
+    }
+
+    if (!baseDir.existsSync()) {
+      baseDir.createSync(recursive: true);
+    }
+
+    final sanitizedTitle = widget.document.title
+        .replaceAll(RegExp(r'[^\w\s\.-]'), '')
+        .trim()
+        .replaceAll(RegExp(r'\s+'), '_');
+    final safeName = sanitizedTitle.isEmpty ? 'documento' : sanitizedTitle;
+    return '${baseDir.path}/$safeName.pdf';
   }
 
   @override
