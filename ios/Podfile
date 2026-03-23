@@ -2,7 +2,7 @@
 platform :ios, '13.0'
 
 # Flutter Generated Helpers
-load File.expand_path(File.join('Flutter', 'generated_pod_helpers.rb'), __FILE__)
+load File.expand_path(File.join('Flutter', 'generated_pod_helpers.rb'), File.dirname(__FILE__))
 
 install! 'cocoapods', :deterministic_uuids => false
 
