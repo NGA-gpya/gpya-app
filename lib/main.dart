@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:myapp/src/routing/app_router.dart';
 import 'package:myapp/src/features/settings/theme_provider.dart';
@@ -13,19 +12,9 @@ void main() {
     () async {
       WidgetsFlutterBinding.ensureInitialized();
 
-      // Credenciales de Supabase por defecto (anon key es pública)
-      String supabaseUrl = 'https://ifbmzqzxvogewkekapcv.supabase.co';
-      String supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlmYm16cXp4dm9nZXdrZWthcGN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk1MzAwMjQsImV4cCI6MjA4NTEwNjAyNH0.K3DZB5QmLs-HnkAz5dkokUkHODzXj-CUW2MN8gMHqgs';
-
-      // Intentar cargar .env solo si existe (desarrollo local)
-      try {
-        await dotenv.load(fileName: ".env");
-        supabaseUrl = dotenv.env['SUPABASE_URL'] ?? supabaseUrl;
-        supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? supabaseAnonKey;
-        developer.log('Loaded .env file successfully', name: 'main');
-      } catch (e) {
-        developer.log('Using default credentials (no .env)', name: 'main');
-      }
+      // Credenciales de Supabase (hardcoded para garantizar funcionamiento en CI/CD y producción)
+      const supabaseUrl = 'https://ifbmzqzxvogewkekapcv.supabase.co';
+      const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlmYm16cXp4dm9nZXdrZWthcGN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk1MzAwMjQsImV4cCI6MjA4NTEwNjAyNH0.K3DZB5QmLs-HnkAz5dkokUkHODzXj-CUW2MN8gMHqgs';
 
       await Supabase.initialize(
         url: supabaseUrl,
