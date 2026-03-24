@@ -13,17 +13,11 @@ workflows:
         BUNDLE_ID: "com.grupopadillayaguilar.gpya"
         APP_STORE_CONNECT_KEY_IDENTIFIER: "9XV54S36Q2"
         APP_STORE_CONNECT_ISSUER_ID: "bc2d99f6-9f24-4284-ab0b-f938acf0e13f"
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.grupopadillayaguilar.gpya
     scripts:
       - name: Get Flutter packages
         script: flutter pub get
 
-      - name: Set up code signing settings on Xcode project
-        script: xcode-project use-profiles
-
-      - name: Build IPA with unique App Store build number
+      - name: Set up iOS code signing
         script: |
           set -e
 
@@ -32,8 +26,27 @@ workflows:
             exit 1
           fi
 
-          if [ -n "$APP_STORE_CONNECT_PUBLISHER_PRIVATE_KEY" ] && [ -z "$APP_STORE_CONNECT_PRIVATE_KEY" ]; then
+          if [ -z "$APP_STORE_CONNECT_PUBLISHER_PRIVATE_KEY" ]; then
+            echo "APP_STORE_CONNECT_PUBLISHER_PRIVATE_KEY is not configured."
+            exit 1
+          fi
+
+          if [ -z "$APP_STORE_CONNECT_PRIVATE_KEY" ]; then
             export APP_STORE_CONNECT_PRIVATE_KEY="$APP_STORE_CONNECT_PUBLISHER_PRIVATE_KEY"
+          fi
+
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
+          keychain add-certificates
+          xcode-project use-profiles
+
+      - name: Build IPA with unique App Store build number
+        script: |
+          set -e
+
+          if [ -z "$APP_APPLE_ID" ]; then
+            echo "APP_APPLE_ID is not configured."
+            exit 1
           fi
 
           APP_VERSION=$(grep '^version:' pubspec.yaml | awk '{print $2}' | cut -d+ -f1)
