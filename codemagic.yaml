@@ -26,19 +26,18 @@ workflows:
             exit 1
           fi
 
-          if [ -z "$APP_STORE_CONNECT_PUBLISHER_PRIVATE_KEY" ]; then
-            echo "APP_STORE_CONNECT_PUBLISHER_PRIVATE_KEY is not configured."
+          if [ -z "$APP_STORE_CONNECT_PRIVATE_KEY" ]; then
+            echo "APP_STORE_CONNECT_PRIVATE_KEY is not configured."
             exit 1
           fi
 
-          PRIVATE_KEY_PATH="$CM_BUILD_DIR/app_store_connect_key.p8"
-          printf '%s' "$APP_STORE_CONNECT_PUBLISHER_PRIVATE_KEY" | perl -pe 's/\\n/\n/g' > "$PRIVATE_KEY_PATH"
-          chmod 600 "$PRIVATE_KEY_PATH"
-
-          APP_STORE_CONNECT_ARGS="--key-id $APP_STORE_CONNECT_KEY_IDENTIFIER --issuer-id $APP_STORE_CONNECT_ISSUER_ID --private-key @file:$PRIVATE_KEY_PATH"
-
           keychain initialize
-          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create $APP_STORE_CONNECT_ARGS
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create \
+            --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
+            --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" \
+            --private-key "@env:APP_STORE_CONNECT_PRIVATE_KEY"
           keychain add-certificates
           xcode-project use-profiles
 
@@ -51,12 +50,11 @@ workflows:
             exit 1
           fi
 
-          PRIVATE_KEY_PATH="$CM_BUILD_DIR/app_store_connect_key.p8"
-          printf '%s' "$APP_STORE_CONNECT_PUBLISHER_PRIVATE_KEY" | perl -pe 's/\\n/\n/g' > "$PRIVATE_KEY_PATH"
-          chmod 600 "$PRIVATE_KEY_PATH"
-
           APP_VERSION=$(grep '^version:' pubspec.yaml | awk '{print $2}' | cut -d+ -f1)
-          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-app-store-build-number "$APP_APPLE_ID" --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER" --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" --private-key "@file:$PRIVATE_KEY_PATH" || true)
+          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-app-store-build-number "$APP_APPLE_ID" \
+            --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
+            --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" \
+            --private-key "@env:APP_STORE_CONNECT_PRIVATE_KEY" || true)
 
           if ! [[ "$LATEST_BUILD_NUMBER" =~ ^[0-9]+$ ]]; then
             LATEST_BUILD_NUMBER=0
@@ -74,10 +72,6 @@ workflows:
         script: |
           set -e
 
-          PRIVATE_KEY_PATH="$CM_BUILD_DIR/app_store_connect_key.p8"
-          printf '%s' "$APP_STORE_CONNECT_PUBLISHER_PRIVATE_KEY" | perl -pe 's/\\n/\n/g' > "$PRIVATE_KEY_PATH"
-          chmod 600 "$PRIVATE_KEY_PATH"
-
           IPA_PATH=$(find "$CM_BUILD_DIR/build/ios/ipa" -maxdepth 1 -name "*.ipa" | head -n 1)
           if [ -z "$IPA_PATH" ]; then
             echo "No IPA artifact found to publish."
@@ -88,7 +82,7 @@ workflows:
             --path "$IPA_PATH" \
             --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
             --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" \
-            --private-key "@file:$PRIVATE_KEY_PATH"
+            --private-key "@env:APP_STORE_CONNECT_PRIVATE_KEY"
     artifacts:
       - build/ios/ipa/*.ipa
       - build/ios/archive/*.xcarchive
