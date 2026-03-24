@@ -57,7 +57,7 @@ workflows:
           fi
 
           APP_VERSION=$(grep '^version:' pubspec.yaml | awk '{print $2}' | cut -d+ -f1)
-          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-app-store-build-number "$APP_APPLE_ID" \
+          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-build-number "$APP_APPLE_ID" \
             --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
             --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" \
             --private-key "@env:APP_STORE_CONNECT_PRIVATE_KEY" || true)
@@ -65,6 +65,8 @@ workflows:
           if ! [[ "$LATEST_BUILD_NUMBER" =~ ^[0-9]+$ ]]; then
             LATEST_BUILD_NUMBER=0
           fi
+
+          echo "Latest App Store Connect build found: $LATEST_BUILD_NUMBER"
 
           BUILD_NUMBER=$((LATEST_BUILD_NUMBER + 1))
 
