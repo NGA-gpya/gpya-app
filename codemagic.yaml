@@ -31,13 +31,19 @@ workflows:
             exit 1
           fi
 
+          if [ -z "$CERTIFICATE_PRIVATE_KEY" ]; then
+            echo "CERTIFICATE_PRIVATE_KEY is not configured."
+            exit 1
+          fi
+
           keychain initialize
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
             --create \
             --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
             --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" \
-            --private-key "@env:APP_STORE_CONNECT_PRIVATE_KEY"
+            --private-key "@env:APP_STORE_CONNECT_PRIVATE_KEY" \
+            --certificate-key "@env:CERTIFICATE_PRIVATE_KEY"
           keychain add-certificates
           xcode-project use-profiles
 
