@@ -10,7 +10,6 @@ workflows:
       groups:
         - appstore_credentials
       vars:
-        APP_STORE_APPLE_ID: "" # Set this in Codemagic with your App Store Connect Apple ID
         BUNDLE_ID: "com.grupopadillayaguilar.gpya"
         APP_STORE_CONNECT_KEY_IDENTIFIER: "9XV54S36Q2"
         APP_STORE_CONNECT_ISSUER_ID: "bc2d99f6-9f24-4284-ab0b-f938acf0e13f"
@@ -28,8 +27,8 @@ workflows:
         script: |
           set -e
 
-          if [ -z "$APP_STORE_APPLE_ID" ]; then
-            echo "APP_STORE_APPLE_ID is not configured."
+          if [ -z "$APP_APPLE_ID" ]; then
+            echo "APP_APPLE_ID is not configured."
             exit 1
           fi
 
@@ -38,7 +37,7 @@ workflows:
           fi
 
           APP_VERSION=$(grep '^version:' pubspec.yaml | awk '{print $2}' | cut -d+ -f1)
-          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID" || true)
+          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-app-store-build-number "$APP_APPLE_ID" || true)
 
           if ! [[ "$LATEST_BUILD_NUMBER" =~ ^[0-9]+$ ]]; then
             LATEST_BUILD_NUMBER=0
