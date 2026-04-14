@@ -1,51 +1,10 @@
 workflows:
-  android-workflow:
-    name: GPYA Android Release
-    max_build_duration: 60
-    instance_type: mac_mini_m2
-    environment:
-      flutter: stable
-      groups:
-        - google_play_credentials
-        - supabase_config
-    scripts:
-      - name: Get Flutter packages
-        script: flutter pub get
-
-      - name: Set up key.properties
-        script: |
-          echo "storePassword=$ANDROID_KEY_PASSWORD" > android/key.properties
-          echo "keyPassword=$ANDROID_KEY_PASSWORD" >> android/key.properties
-          echo "keyAlias=$ANDROID_KEY_ALIAS" >> android/key.properties
-          echo "storeFile=/tmp/upload-keystore.jks" >> android/key.properties
-          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > /tmp/upload-keystore.jks
-
-      - name: Build Android AAB and APK
-        script: |
-          flutter build appbundle --release \
-            --build-name=1.0.0 \
-            --build-number=$BUILD_NUMBER \
-            --dart-define=SUPABASE_URL=$SUPABASE_URL \
-            --dart-define=SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY
-          
-          flutter build apk --release \
-            --dart-define=SUPABASE_URL=$SUPABASE_URL \
-            --dart-define=SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY
-    artifacts:
-      - build/app/outputs/bundle/release/*.aab
-      - build/app/outputs/flutter-apk/*.apk
-    publishing:
-      email:
-        recipients:
-          - proyectos@gpya.com.mx
-
   ios-workflow:
     name: GPYA iOS Release
     max_build_duration: 120
     instance_type: mac_mini_m2
-    # CORRECCIÓN: Se requiere el bloque integrations para usar publishing.app_store_connect
     integrations:
-      app_store_connect: "GPYA Integration" # Nombre de tu conexión en Codemagic
+      app_store_connect: "GPYA Integration" # Asegúrate de que este nombre coincida en tu panel de Codemagic
     environment:
       flutter: stable
       xcode: latest
