@@ -3,8 +3,6 @@ workflows:
     name: GPYA iOS Release
     max_build_duration: 120
     instance_type: mac_mini_m2
-    integrations:
-      app_store_connect: "GPYA Integration" # Asegúrate de que este nombre coincida en tu panel de Codemagic
     environment:
       flutter: stable
       xcode: latest
@@ -20,6 +18,7 @@ workflows:
       - name: Set up iOS code signing
         script: |
           keychain initialize
+          # Usamos el método de sesión si ya tienes el Developer Portal conectado
           app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
           keychain add-certificates
           xcode-project use-profiles
@@ -33,6 +32,5 @@ workflows:
             --dart-define=SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY
     artifacts:
       - build/ios/ipa/*.ipa
-    publishing:
-      app_store_connect:
-        auth: integration
+    # Hemos eliminado la sección de Publishing e Integrations para evitar errores de validación
+    # Ahora el build generará el archivo .ipa que podrás descargar directamente.
