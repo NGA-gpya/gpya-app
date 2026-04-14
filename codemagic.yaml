@@ -1,98 +1,81 @@
 workflows:
-  ios-app-store:
-    name: GPYA iOS App Store
+  android-workflow:
+    name: GPYA Android Release
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      flutter: stable
+      groups:
+        - google_play_credentials # Grupo en Codemagic para Keystore y contraseñas
+        - supabase_config      # Grupo para SUPABASE_URL y SUPABASE_ANON_KEY
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+
+      - name: Set up key.properties
+        script: |
+          echo "storePassword=$ANDROID_KEY_PASSWORD" > android/key.properties
+          echo "keyPassword=$ANDROID_KEY_PASSWORD" >> android/key.properties
+          echo "keyAlias=$ANDROID_KEY_ALIAS" >> android/key.properties
+          echo "storeFile=/tmp/upload-keystore.jks" >> android/key.properties
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > /tmp/upload-keystore.jks
+
+      - name: Build Android AAB
+        script: |
+          flutter build appbundle --release \
+            --build-name=1.0.0 \
+            --build-number=$BUILD_NUMBER \
+            --dart-define=SUPABASE_URL=$SUPABASE_URL \
+            --dart-define=SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY
+
+      - name: Build Android APK
+        script: |
+          flutter build apk --release \
+            --dart-define=SUPABASE_URL=$SUPABASE_URL \
+            --dart-define=SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY
+    artifacts:
+      - build/app/outputs/bundle/release/*.aab
+      - build/app/outputs/flutter-apk/*.apk
+    publishing:
+      email:
+        recipients:
+          - proyectos@gpya.com.mx
+
+  ios-workflow:
+    name: GPYA iOS Release
     max_build_duration: 120
     instance_type: mac_mini_m2
     environment:
       flutter: stable
       xcode: latest
-      cocoapods: default
       groups:
-        - appstore_credentials
+        - appstore_credentials # Grupo para certificados y Apple ID
+        - supabase_config      # Grupo para SUPABASE_URL y SUPABASE_ANON_KEY
       vars:
         BUNDLE_ID: "com.grupopadillayaguilar.gpya"
-        APP_STORE_CONNECT_KEY_IDENTIFIER: "9XV54S36Q2"
-        APP_STORE_CONNECT_ISSUER_ID: "bc2d99f6-9f24-4284-ab0b-f938acf0e13f"
     scripts:
       - name: Get Flutter packages
         script: flutter pub get
 
       - name: Set up iOS code signing
         script: |
-          set -e
-
-          if [ -z "$APP_APPLE_ID" ]; then
-            echo "APP_APPLE_ID is not configured."
-            exit 1
-          fi
-
-          if [ -z "$APP_STORE_CONNECT_PRIVATE_KEY" ]; then
-            echo "APP_STORE_CONNECT_PRIVATE_KEY is not configured."
-            exit 1
-          fi
-
-          if [ -z "$CERTIFICATE_PRIVATE_KEY" ]; then
-            echo "CERTIFICATE_PRIVATE_KEY is not configured."
-            exit 1
-          fi
-
           keychain initialize
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
-            --create \
-            --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
-            --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" \
-            --private-key "@env:APP_STORE_CONNECT_PRIVATE_KEY" \
-            --certificate-key "@env:CERTIFICATE_PRIVATE_KEY"
+            --create
           keychain add-certificates
           xcode-project use-profiles
 
-      - name: Build IPA with unique App Store build number
+      - name: Build IPA
         script: |
-          set -e
-
-          if [ -z "$APP_APPLE_ID" ]; then
-            echo "APP_APPLE_ID is not configured."
-            exit 1
-          fi
-
-          APP_VERSION=$(grep '^version:' pubspec.yaml | awk '{print $2}' | cut -d+ -f1)
-          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-build-number "$APP_APPLE_ID" \
-            --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
-            --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" \
-            --private-key "@env:APP_STORE_CONNECT_PRIVATE_KEY" || true)
-
-          if ! [[ "$LATEST_BUILD_NUMBER" =~ ^[0-9]+$ ]]; then
-            LATEST_BUILD_NUMBER=0
-          fi
-
-          echo "Latest App Store Connect build found: $LATEST_BUILD_NUMBER"
-
-          BUILD_NUMBER=$((LATEST_BUILD_NUMBER + 1))
-
-          echo "Building version $APP_VERSION ($BUILD_NUMBER)"
-
           flutter build ipa --release \
-            --build-name="$APP_VERSION" \
-            --build-number="$BUILD_NUMBER"
-
-      - name: Publish IPA to App Store Connect
-        script: |
-          set -e
-
-          IPA_PATH=$(find "$CM_BUILD_DIR/build/ios/ipa" -maxdepth 1 -name "*.ipa" | head -n 1)
-          if [ -z "$IPA_PATH" ]; then
-            echo "No IPA artifact found to publish."
-            exit 1
-          fi
-
-          app-store-connect publish \
-            --path "$IPA_PATH" \
-            --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
-            --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" \
-            --private-key "@env:APP_STORE_CONNECT_PRIVATE_KEY"
+            --build-name=1.0.0 \
+            --build-number=$BUILD_NUMBER \
+            --export-options-plist=/Users/builder/export_options.plist \
+            --dart-define=SUPABASE_URL=$SUPABASE_URL \
+            --dart-define=SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY
     artifacts:
       - build/ios/ipa/*.ipa
-      - build/ios/archive/*.xcarchive
-      - /tmp/xcodebuild_logs/*.log
-      - flutter_drive.log
+    publishing:
+      app_store_connect:
+        auth: integration
