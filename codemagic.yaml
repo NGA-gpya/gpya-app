@@ -65,8 +65,8 @@ workflows:
           flutter build ipa --release \
             --build-name="$APP_VERSION" \
             --build-number="$BUILD_NUMBER" \
-            --dart-define=SUPABASE_URL="$SUPABASE_URL" \
-            --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+            --dart-define=SUPABASE_URL="https://fubivpdiirocyvzensgi.supabase.co" \
+            --dart-define=SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ1Yml2cGRpaXJvY3l2emVuc2dpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA0MDcxMTcsImV4cCI6MjA4NTk4MzExN30.SDh3dEwzvz_O0IjTSZbwQOEwedBvjsobOOJ3TacXg7k"
 
       - name: Publish IPA to App Store Connect
         script: |
