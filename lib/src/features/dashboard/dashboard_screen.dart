@@ -240,52 +240,83 @@ class _DocumentCardState extends ConsumerState<_DocumentCard> {
     });
   }
 
-  Future<void> _showPermissionDialog(String title, String message) async {
-    return showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('CANCELAR', style: TextStyle(color: Colors.grey)),
+  Future<bool> _requestStoragePermission() async {
+    if (Platform.isIOS) return true;
+
+    // Estado actual del permiso
+    PermissionStatus status = await Permission.storage.status;
+
+    if (status.isGranted) return true;
+
+    // Si es Android 11 o superior, el sistema maneja los permisos de forma distinta
+    if (status.isDenied || status.isLimited) {
+      // Mostrar diálogo explicativo obligatorio
+      bool? proceed = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.folder_shared_outlined, color: Colors.blue),
+              SizedBox(width: 10),
+              Text('Permiso Requerido'),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('ACEPTAR'),
+          content: const Text(
+            'Para descargar el documento en tu carpeta de "Descargas", GPYA necesita permiso para escribir archivos en el dispositivo. ¿Deseas otorgarlo ahora?',
           ),
-        ],
-      ),
-    );
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('AHORA NO', style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white),
+              child: const Text('DAR PERMISO'),
+            ),
+          ],
+        ),
+      );
+
+      if (proceed != true) return false;
+
+      // Pedir permiso al sistema
+      status = await Permission.storage.request();
+    }
+
+    // Si el usuario lo denegó permanentemente, lo enviamos a ajustes
+    if (status.isPermanentlyDenied) {
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Permiso Bloqueado'),
+            content: const Text('Has desactivado manualmente los permisos de archivos. Debes activarlos en la configuración de la app para poder descargar documentos.'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text('CANCELAR')),
+              ElevatedButton(onPressed: () => openAppSettings(), child: const Text('IR A AJUSTES')),
+            ],
+          ),
+        );
+      }
+      return false;
+    }
+
+    return status.isGranted;
   }
 
   Future<void> _downloadFile() async {
+    // Verificar permisos de forma obligatoria antes de proceder
+    final hasPermission = await _requestStoragePermission();
+    if (!hasPermission) return;
+
+    setState(() {
+      _isDownloading = true;
+      _progress = 0.0;
+    });
+
     try {
-      if (Platform.isAndroid) {
-        // Mostrar diálogo de explicación previo
-        await _showPermissionDialog(
-          'Permiso de Almacenamiento',
-          'GPYA necesita acceder a tu carpeta de descargas para guardar el documento seleccionado.',
-        );
-
-        // Pedir permiso
-        if (await Permission.manageExternalStorage.request().isDenied && 
-            await Permission.storage.request().isDenied) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Permiso denegado. No se puede guardar el archivo.')),
-            );
-          }
-          return;
-        }
-      }
-
-      setState(() {
-        _isDownloading = true;
-        _progress = 0.0;
-      });
-
       final dio = Dio();
       final savePath = await _resolveSavePath();
       if (savePath == null) throw Exception('No se pudo determinar la ruta de guardado');
@@ -309,7 +340,10 @@ class _DocumentCardState extends ConsumerState<_DocumentCard> {
           _filePath = savePath;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Documento guardado en Downloads: ${widget.document.title}')),
+          SnackBar(
+            content: Text('Guardado en Downloads: ${widget.document.title}'),
+            backgroundColor: Colors.green,
+          ),
         );
       }
     } catch (e) {
@@ -318,7 +352,7 @@ class _DocumentCardState extends ConsumerState<_DocumentCard> {
           _isDownloading = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al descargar: $e')),
+          SnackBar(content: Text('Error al descargar: $e'), backgroundColor: Colors.red),
         );
       }
     }
@@ -343,7 +377,6 @@ class _DocumentCardState extends ConsumerState<_DocumentCard> {
         .replaceAll(RegExp(r'\s+'), '_');
 
     if (Platform.isAndroid) {
-      // Ruta estándar de Android Downloads
       baseDir = Directory('/storage/emulated/0/Download');
       if (!baseDir.existsSync()) {
         baseDir = await getExternalStorageDirectory();
