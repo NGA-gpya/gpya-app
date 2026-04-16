@@ -240,62 +240,124 @@ class _DocumentCardState extends ConsumerState<_DocumentCard> {
     });
   }
 
+  Future<void> _showPermissionDialog(String title, String message) async {
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('CANCELAR', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ACEPTAR'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _downloadFile() async {
-    if (Platform.isAndroid) {
-      final storageStatus = await Permission.storage.request();
-      if (storageStatus.isDenied) return;
-    }
-    setState(() {
-      _isDownloading = true;
-      _progress = 0.0;
-    });
     try {
+      if (Platform.isAndroid) {
+        // Mostrar diálogo de explicación previo
+        await _showPermissionDialog(
+          'Permiso de Almacenamiento',
+          'GPYA necesita acceder a tu carpeta de descargas para guardar el documento seleccionado.',
+        );
+
+        // Pedir permiso
+        if (await Permission.manageExternalStorage.request().isDenied && 
+            await Permission.storage.request().isDenied) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Permiso denegado. No se puede guardar el archivo.')),
+            );
+          }
+          return;
+        }
+      }
+
+      setState(() {
+        _isDownloading = true;
+        _progress = 0.0;
+      });
+
       final dio = Dio();
       final savePath = await _resolveSavePath();
-      if (savePath == null) throw Exception('No path resolved');
+      if (savePath == null) throw Exception('No se pudo determinar la ruta de guardado');
+
       await dio.download(
         widget.document.downloadUrl,
         savePath,
         onReceiveProgress: (received, total) {
           if (total != -1) {
-            setState(() { _progress = received / total; });
+            setState(() {
+              _progress = received / total;
+            });
           }
         },
       );
+
       if (mounted) {
         setState(() {
           _isDownloading = false;
           _isDownloaded = true;
           _filePath = savePath;
         });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Documento guardado en Downloads: ${widget.document.title}')),
+        );
       }
     } catch (e) {
       if (mounted) {
-        setState(() { _isDownloading = false; });
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        setState(() {
+          _isDownloading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al descargar: $e')),
+        );
       }
     }
   }
 
   Future<void> _openFile() async {
     if (_filePath != null) {
-      await OpenFilex.open(_filePath!);
+      final result = await OpenFilex.open(_filePath!);
+      if (result.type != ResultType.done && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No se pudo abrir el archivo: ${result.message}')),
+        );
+      }
     }
   }
 
   Future<String?> _resolveSavePath() async {
     Directory? baseDir;
+    String fileName = widget.document.title
+        .replaceAll(RegExp(r'[^\w\s\.-]'), '')
+        .trim()
+        .replaceAll(RegExp(r'\s+'), '_');
+
     if (Platform.isAndroid) {
+      // Ruta estándar de Android Downloads
       baseDir = Directory('/storage/emulated/0/Download');
+      if (!baseDir.existsSync()) {
+        baseDir = await getExternalStorageDirectory();
+      }
     } else if (Platform.isIOS) {
       baseDir = await getApplicationDocumentsDirectory();
     } else {
-      baseDir = await getDownloadsDirectory() ?? await getApplicationDocumentsDirectory();
+      baseDir = await getDownloadsDirectory();
     }
-    // baseDir is non-nullable after the previous assignments
+
+    if (baseDir == null) return null;
     if (!baseDir.existsSync()) baseDir.createSync(recursive: true);
-    final sanitizedTitle = widget.document.title.replaceAll(RegExp(r'[^\w\s\.-]'), '').trim().replaceAll(RegExp(r'\s+'), '_');
-    return '${baseDir.path}/$sanitizedTitle.pdf';
+
+    return '${baseDir.path}/$fileName.pdf';
   }
 
   @override

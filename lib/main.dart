@@ -14,12 +14,12 @@ void main() {
 
       const supabaseUrl = String.fromEnvironment(
         'SUPABASE_URL',
-        defaultValue: 'https://fubivpdiirocyvzensgi.supabase.co',
+        defaultValue: 'https://ifbmzqzxvogewkekapcv.supabase.co',
       );
       const supabaseAnonKey = String.fromEnvironment(
         'SUPABASE_ANON_KEY',
         defaultValue:
-            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ1Yml2cGRpaXJvY3l2emVuc2dpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA0MDcxMTcsImV4cCI6MjA4NTk4MzExN30.SDh3dEwzvz_O0IjTSZbwQOEwedBvjsobOOJ3TacXg7k',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlmYm16cXp4dm9nZXdrZWthcGN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk1MzAwMjQsImV4cCI6MjA4NTEwNjAyNH0.K3DZB5QmLs-HnkAz5dkokUkHODzXj-CUW2MN8gMHqgs',
       );
 
       await Supabase.initialize(
