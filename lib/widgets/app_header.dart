@@ -28,12 +28,16 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
             // USA EL ICONO CORRECTO DE LA APP
             Image.asset('assets/icon/icon-app.jpg', height: 40),
             const SizedBox(width: 12),
-            // Nombre de la empresa
-            Text(
-              'Grupo Padilla y Aguilar',
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontSize: 16, // Reducido un poco para acomodar el nombre largo
-                fontWeight: FontWeight.w600,
+            // Nombre de la empresa flexible
+            Expanded(
+              child: Text(
+                'Grupo Padilla y Aguilar',
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ],

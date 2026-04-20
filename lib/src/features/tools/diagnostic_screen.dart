@@ -21,7 +21,7 @@ class _DiagnosticScreenState extends State<DiagnosticScreen> {
   int _currentIndex = 0;
   final Map<String, int> _normScores = {};
   final Map<String, int> _normTotals = {};
-  final List<String> _currentRecommendations = [];
+  final List<DiagnosticRecommendation> _currentRecommendations = [];
 
   @override
   void initState() {
@@ -31,8 +31,10 @@ class _DiagnosticScreenState extends State<DiagnosticScreen> {
       (c) => c.name == widget.categoryName,
       orElse: () => DocumentCategory.seguridad,
     );
-    _questions =
-        diagnosticQuestions.where((q) => q.category == category).toList();
+    _questions = buildDiagnosticSession(
+      category,
+      sessionSalt: DateTime.now().microsecondsSinceEpoch & 0x7fffffff,
+    );
 
     // Inicializar contadores por norma
     for (var q in _questions) {
@@ -67,8 +69,20 @@ class _DiagnosticScreenState extends State<DiagnosticScreen> {
     if (yes) {
       _normScores[question.norm] = (_normScores[question.norm] ?? 0) + 1;
     } else {
-      if (!_currentRecommendations.contains(question.advice)) {
-        _currentRecommendations.add(question.advice);
+      final exists = _currentRecommendations.any(
+        (recommendation) =>
+            recommendation.norm == question.norm &&
+            recommendation.advice == question.advice,
+      );
+
+      if (!exists) {
+        _currentRecommendations.add(
+          DiagnosticRecommendation(
+            norm: question.norm,
+            topic: question.topic,
+            advice: question.advice,
+          ),
+        );
       }
     }
 
@@ -171,6 +185,41 @@ class _DiagnosticScreenState extends State<DiagnosticScreen> {
                   ],
                 ),
                 const SizedBox(height: 40),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Evaluación dinámica de hoy',
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.w900,
+                          color: theme.colorScheme.primary,
+                          letterSpacing: 0.4,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Mostramos una combinación de preguntas clave para evitar resultados repetitivos y enfocarnos en hallazgos prioritarios.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
 
                 Expanded(
                   child: PageView.builder(
@@ -181,41 +230,65 @@ class _DiagnosticScreenState extends State<DiagnosticScreen> {
                       final question = _questions[index];
                       return Center(
                         child: GlassCard(
-                          padding: const EdgeInsets.all(32),
+                          padding: const EdgeInsets.all(24),
                           opacity: 0.05,
                           blur: 10,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 8,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: theme.colorScheme.primary.withValues(
-                                    alpha: 0.1,
+                          borderRadius: BorderRadius.circular(28),
+                          child: SingleChildScrollView(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 8,
                                   ),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  question.norm,
-                                  style: theme.textTheme.labelLarge?.copyWith(
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.primary.withValues(
+                                      alpha: 0.1,
+                                    ),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    question.norm,
+                                    style: theme.textTheme.labelLarge?.copyWith(
+                                      color: theme.colorScheme.primary,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                ).animate().scale(delay: 200.ms),
+                                const SizedBox(height: 24),
+                                Text(
+                                  question.question,
+                                  style: theme.textTheme.headlineSmall?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                    height: 1.3,
+                                    fontSize: 20,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ).animate().fade(delay: 400.ms),
+                                const SizedBox(height: 20),
+                                Text(
+                                  question.topic,
+                                  style: theme.textTheme.titleSmall?.copyWith(
                                     color: theme.colorScheme.primary,
-                                    fontWeight: FontWeight.w900,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0.5,
                                   ),
-                                ),
-                              ).animate().scale(delay: 200.ms),
-                              const SizedBox(height: 32),
-                              Text(
-                                question.question,
-                                style: theme.textTheme.headlineSmall?.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                  height: 1.3,
-                                ),
-                                textAlign: TextAlign.center,
-                              ).animate().fade(delay: 400.ms),
-                            ],
+                                  textAlign: TextAlign.center,
+                                ).animate().fade(delay: 500.ms),
+                                const SizedBox(height: 8),
+                                Text(
+                                  diagnosticNormTitle(question.norm),
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.onSurface.withValues(alpha: 0.65),
+                                    height: 1.4,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ).animate().fade(delay: 550.ms),
+                              ],
+                            ),
                           ),
                         ),
                       );

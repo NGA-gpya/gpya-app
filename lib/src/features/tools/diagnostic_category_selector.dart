@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:myapp/src/features/dashboard/document_model.dart';
 import 'package:myapp/src/features/tools/diagnostic_models.dart';
-import 'package:go_router/go_router.dart';
 
 class DiagnosticCategorySelector extends StatelessWidget {
   const DiagnosticCategorySelector({super.key});
@@ -10,10 +10,7 @@ class DiagnosticCategorySelector extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    // Filtrar categorías que tienen preguntas
-    final categories = DocumentCategory.values.where((cat) {
-      return diagnosticQuestions.any((q) => q.category == cat);
-    }).toList();
+    final categories = DocumentCategory.values.where(hasDiagnosticQuestionsForCategory).toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -66,7 +63,7 @@ class _CategoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     IconData icon;
     Color color;
 
@@ -133,6 +130,7 @@ class _CategoryCard extends StatelessWidget {
 
 class _InfoCard extends StatelessWidget {
   final ThemeData theme;
+
   const _InfoCard({required this.theme});
 
   @override

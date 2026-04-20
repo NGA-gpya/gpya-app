@@ -1,3 +1,4 @@
+//librerias
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -42,7 +43,7 @@ void main() {
 
 class MyApp extends ConsumerWidget {
   const MyApp({super.key});
-
+//paleta colores standard
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     
@@ -109,7 +110,7 @@ class MyApp extends ConsumerWidget {
         type: BottomNavigationBarType.fixed,
       ),
     );
-
+//Bugs return 0
     return MaterialApp.router(
       title: 'GPYA',
       theme: lightTheme,
