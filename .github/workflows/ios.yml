@@ -8,11 +8,16 @@ on:
 jobs:
   build-ios:
     name: Build & Publish iOS App
-    runs-on: macos-14 # Mac con macOS Sonoma y Xcode 15+
+    runs-on: macos-latest # Usaremos siempre el último macOS disponible
     
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Configurar versión de Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
 
       - name: Set up Java
         uses: actions/setup-java@v4
