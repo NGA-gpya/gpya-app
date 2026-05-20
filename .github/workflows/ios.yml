@@ -42,14 +42,16 @@ jobs:
           flutter pub get
           cd ios && pod install --repo-update && cd ..
 
-      - name: Configurar firma de código iOS
+      - name: Firmar y Compilar IPA (iOS)
         env:
           APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
           CERTIFICATE_PRIVATE_KEY: ${{ secrets.CERTIFICATE_PRIVATE_KEY }}
           BUNDLE_ID: "com.grupopadillayaguilar.gpya"
+          APP_APPLE_ID: "6760839072"
           APP_STORE_CONNECT_KEY_IDENTIFIER: "9XV54S36Q2"
           APP_STORE_CONNECT_ISSUER_ID: "bc2d99f6-9f24-4284-ab0b-f938acf0e13f"
         run: |
+          echo "Iniciando configuración de llavero y descarga de perfiles..."
           keychain initialize
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
@@ -58,21 +60,17 @@ jobs:
             --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" \
             --private-key "@env:APP_STORE_CONNECT_PRIVATE_KEY" \
             --certificate-key "@env:CERTIFICATE_PRIVATE_KEY"
+          
           keychain add-certificates
           xcode-project use-profiles
+          
+          echo "Verificando perfiles descargados:"
+          ls -la ~/Library/MobileDevice/Provisioning\ Profiles/ || echo "No se encontró el directorio de perfiles"
 
-      - name: Compilar IPA (iOS)
-        env:
-          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
-          BUNDLE_ID: "com.grupopadillayaguilar.gpya"
-          APP_APPLE_ID: "6760839072"
-          APP_STORE_CONNECT_KEY_IDENTIFIER: "9XV54S36Q2"
-          APP_STORE_CONNECT_ISSUER_ID: "bc2d99f6-9f24-4284-ab0b-f938acf0e13f"
-        run: |
           # Extraer versión del pubspec.yaml
           APP_VERSION=$(grep '^version:' pubspec.yaml | awk '{print $2}' | cut -d+ -f1)
           
-          # Obtener el último número de build en App Store Connect para incrementarlo automáticamente
+          # Obtener el último número de build
           LATEST_BUILD_NUMBER=$(app-store-connect get-latest-build-number "$APP_APPLE_ID" \
             --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
             --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" \
@@ -81,7 +79,6 @@ jobs:
           if ! [[ "$LATEST_BUILD_NUMBER" =~ ^[0-9]+$ ]]; then
             LATEST_BUILD_NUMBER=0
           fi
-
           BUILD_NUMBER=$((LATEST_BUILD_NUMBER + 1))
 
           echo "Compilando Versión: $APP_VERSION (Build $BUILD_NUMBER)"
