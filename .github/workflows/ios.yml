@@ -64,6 +64,10 @@ jobs:
           keychain add-certificates
           xcode-project use-profiles
           
+          echo "Moviendo perfiles al directorio correcto de Xcode (MobileDevice)..."
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles/*.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/ || true
+          
           echo "Verificando perfiles descargados:"
           ls -la ~/Library/MobileDevice/Provisioning\ Profiles/ || echo "No se encontró el directorio de perfiles"
 
@@ -84,6 +88,7 @@ jobs:
           echo "Compilando Versión: $APP_VERSION (Build $BUILD_NUMBER)"
 
           flutter build ipa --release \
+            --export-options-plist=/Users/runner/export_options.plist \
             --build-name="$APP_VERSION" \
             --build-number="$BUILD_NUMBER" \
             --dart-define=SUPABASE_URL="https://ifbmzqzxvogewkekapcv.supabase.co" \
