@@ -1,0 +1,111 @@
+name: GPYA iOS Release (GitHub Actions)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: # Permite iniciar la compilación manualmente desde la pestaña Actions en GitHub
+
+jobs:
+  build-ios:
+    name: Build & Publish iOS App
+    runs-on: macos-14 # Mac con macOS Sonoma y Xcode 15+
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Set up Python (para herramientas de Codemagic)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Instalar herramientas de Codemagic
+        run: |
+          python -m pip install --upgrade pip
+          pip install codemagic-cli-tools
+
+      - name: Obtener dependencias de Flutter
+        run: |
+          flutter clean
+          flutter pub get
+          cd ios && pod install --repo-update && cd ..
+
+      - name: Configurar firma de código iOS
+        env:
+          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+          CERTIFICATE_PRIVATE_KEY: ${{ secrets.CERTIFICATE_PRIVATE_KEY }}
+          BUNDLE_ID: "com.grupopadillayaguilar.gpya"
+          APP_STORE_CONNECT_KEY_IDENTIFIER: "9XV54S36Q2"
+          APP_STORE_CONNECT_ISSUER_ID: "bc2d99f6-9f24-4284-ab0b-f938acf0e13f"
+        run: |
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create \
+            --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
+            --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" \
+            --private-key "@env:APP_STORE_CONNECT_PRIVATE_KEY" \
+            --certificate-key "@env:CERTIFICATE_PRIVATE_KEY"
+          keychain add-certificates
+          xcode-project use-profiles
+
+      - name: Compilar IPA (iOS)
+        env:
+          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+          BUNDLE_ID: "com.grupopadillayaguilar.gpya"
+          APP_APPLE_ID: "6760839072"
+          APP_STORE_CONNECT_KEY_IDENTIFIER: "9XV54S36Q2"
+          APP_STORE_CONNECT_ISSUER_ID: "bc2d99f6-9f24-4284-ab0b-f938acf0e13f"
+        run: |
+          # Extraer versión del pubspec.yaml
+          APP_VERSION=$(grep '^version:' pubspec.yaml | awk '{print $2}' | cut -d+ -f1)
+          
+          # Obtener el último número de build en App Store Connect para incrementarlo automáticamente
+          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-build-number "$APP_APPLE_ID" \
+            --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
+            --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" \
+            --private-key "@env:APP_STORE_CONNECT_PRIVATE_KEY" || echo "0")
+
+          if ! [[ "$LATEST_BUILD_NUMBER" =~ ^[0-9]+$ ]]; then
+            LATEST_BUILD_NUMBER=0
+          fi
+
+          BUILD_NUMBER=$((LATEST_BUILD_NUMBER + 1))
+
+          echo "Compilando Versión: $APP_VERSION (Build $BUILD_NUMBER)"
+
+          flutter build ipa --release \
+            --build-name="$APP_VERSION" \
+            --build-number="$BUILD_NUMBER" \
+            --dart-define=SUPABASE_URL="https://ifbmzqzxvogewkekapcv.supabase.co" \
+            --dart-define=SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlmYm16cXp4dm9nZXdrZWthcGN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk1MzAwMjQsImV4cCI6MjA4NTEwNjAyNH0.K3DZB5QmLs-HnkAz5dkokUkHODzXj-CUW2MN8gMHqgs"
+
+      - name: Publicar IPA en App Store Connect
+        env:
+          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+          APP_STORE_CONNECT_KEY_IDENTIFIER: "9XV54S36Q2"
+          APP_STORE_CONNECT_ISSUER_ID: "bc2d99f6-9f24-4284-ab0b-f938acf0e13f"
+        run: |
+          IPA_PATH=$(find build/ios/ipa -maxdepth 1 -name "*.ipa" | head -n 1)
+          if [ -z "$IPA_PATH" ]; then
+            echo "No se encontró el archivo IPA compilado para publicar."
+            exit 1
+          fi
+
+          app-store-connect publish \
+            --path "$IPA_PATH" \
+            --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
+            --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" \
+            --private-key "@env:APP_STORE_CONNECT_PRIVATE_KEY"
